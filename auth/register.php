@@ -1,33 +1,84 @@
 <?php
-include "../config/config.php";
+require '../config.php';
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
+$error = "";
 
-    $username = $_POST['username'];
-    $email = $_POST['email'];
-    $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
-    $stmt = $conn->prepare("INSERT INTO users (username, email, password) VALUES (?, ?, ?)");
-    $stmt->bind_param("sss", $username, $email, $password);
+    $nombre = trim($_POST["nombre"]);
+    $email = trim($_POST["email"]);
+    $password = $_POST["password"];
 
-    if ($stmt->execute()) {
+    if ($nombre && $email && $password) {
 
-        $user_id = $stmt->insert_id;
+        $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
-        // Crear wallet con saldo inicial 100
-        $conn->query("INSERT INTO wallets (user_id, balance) VALUES ($user_id, 100)");
+        $stmt = $pdo->prepare("INSERT INTO usuarios (nombre, email, password)
+                               VALUES (:nombre, :email, :password)");
+        $stmt->execute([
+            ':nombre' => $nombre,
+            ':email' => $email,
+            ':password' => $passwordHash
+        ]);
 
-        echo "Registro exitoso. <a href='login.php'>Iniciar sesión</a>";
+        header("Location: login.php");
+        exit();
+
     } else {
-        echo "Error: Usuario o email ya existe";
+        $error = "Todos los campos son obligatorios";
     }
 }
 ?>
 
-<form method="POST">
-    <h2>Registro</h2>
-    <input name="username" placeholder="Usuario" required><br><br>
-    <input name="email" type="email" placeholder="Email" required><br><br>
-    <input name="password" type="password" placeholder="Contraseña" required><br><br>
-    <button type="submit">Registrarse</button>
-</form>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Registro</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-light">
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-4">
+
+            <div class="card shadow">
+                <div class="card-body">
+                    <h4 class="text-center mb-4">Crear Cuenta</h4>
+
+                    <?php if ($error): ?>
+                        <div class="alert alert-danger">
+                            <?= htmlspecialchars($error) ?>
+                        </div>
+                    <?php endif; ?>
+
+                    <form method="POST">
+                        <div class="mb-3">
+                            <input type="text" name="nombre" class="form-control" placeholder="Nombre" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <input type="email" name="email" class="form-control" placeholder="Email" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <input type="password" name="password" class="form-control" placeholder="Password" required>
+                        </div>
+
+                        <button class="btn btn-success w-100">Registrarse</button>
+                    </form>
+
+                    <div class="text-center mt-3">
+                        <a href="login.php">Ya tengo cuenta</a>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
