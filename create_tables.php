@@ -4,8 +4,9 @@ require 'config.php';
 try {
 
     $sql = "
+    DROP TABLE IF EXISTS usuarios;
 
-    CREATE TABLE IF NOT EXISTS usuarios (
+    CREATE TABLE usuarios (
         id SERIAL PRIMARY KEY,
         nombre VARCHAR(120) NOT NULL,
         email VARCHAR(150) UNIQUE NOT NULL,
@@ -17,14 +18,12 @@ try {
         estado VARCHAR(20) DEFAULT 'activo',
         creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
-
     ";
 
     $pdo->exec($sql);
 
-    echo "<h2>✅ Tabla creada correctamente.</h2>";
+    echo "✅ Tabla reiniciada correctamente.";
 
 } catch (PDOException $e) {
-    echo "<h2>❌ Error creando tabla:</h2>";
-    echo $e->getMessage();
+    echo "❌ Error: " . $e->getMessage();
 }
