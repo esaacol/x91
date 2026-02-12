@@ -1,9 +1,5 @@
 <?php
 require '../config.php';
-require '../vendor/autoload.php';
-
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
 
 $mensaje = "";
 
@@ -17,11 +13,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $mensaje = "Todos los campos son obligatorios.";
     } else {
 
+        // Verificar si ya existe
         $stmt = $pdo->prepare("SELECT id FROM usuarios WHERE email = ?");
         $stmt->execute([$email]);
 
         if ($stmt->fetch()) {
-            $mensaje = "El email ya está registrado.";
+            $mensaje = "El correo ya está registrado.";
         } else {
 
             $hash = password_hash($password, PASSWORD_DEFAULT);
@@ -35,38 +32,80 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             $stmt->execute([$nombre, $email, $hash, $otp, $expira]);
 
-            // Enviar OTP
-            $mail = new PHPMailer(true);
+            // ==========================
+            // ENVÍO EMAIL CON RESEND API
+            // ==========================
 
-            try {
-                $mail->isSMTP();
-                $mail->Host = 'smtp.gmail.com';
-                $mail->SMTPAuth = true;
-                $mail->Username = getenv("MAIL_USER");
-                $mail->Password = getenv("MAIL_PASS");
-                $mail->SMTPSecure = 'tls';
-                $mail->Port = 587;
+            $apiKey = getenv("RESEND_API_KEY");
 
-                $mail->setFrom(getenv("MAIL_USER"), 'X91');
-                $mail->addAddress($email);
+            $htmlEmail = "
+            <div style='margin:0;padding:0;background:#0f2027;font-family:Segoe UI,Arial,sans-serif'>
+                <div style='max-width:600px;margin:40px auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,0.2)'>
+                    
+                    <div style='background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);padding:30px;text-align:center;color:white'>
+                        <h1 style='margin:0;font-size:32px;letter-spacing:4px'>X91</h1>
+                        <p style='margin-top:10px;opacity:0.8'>La nueva generación digital</p>
+                    </div>
 
-                $mail->isHTML(true);
-                $mail->Subject = 'Verificación X91';
-                $mail->Body = "
-                    <h2>Bienvenido a X91</h2>
-                    <p>Tu código de verificación es:</p>
-                    <h1>$otp</h1>
-                    <p>Expira en 10 minutos.</p>
-                ";
+                    <div style='padding:40px;text-align:center'>
+                        <h2 style='margin-bottom:20px;color:#203a43'>Verifica tu cuenta</h2>
+                        <p style='font-size:16px;color:#555'>
+                            Hola <strong>$nombre</strong>, gracias por unirte a X91.
+                        </p>
+                        <p style='color:#555'>
+                            Usa el siguiente código para activar tu cuenta:
+                        </p>
 
-                $mail->send();
+                        <div style='margin:30px 0;font-size:36px;font-weight:bold;letter-spacing:8px;color:#0072ff'>
+                            $otp
+                        </div>
 
-                header("Location: verify.php?email=" . urlencode($email));
-                exit();
+                        <p style='color:#888;font-size:14px'>
+                            Este código expirará en 10 minutos.
+                        </p>
 
-            } catch (Exception $e) {
-                $mensaje = "Error enviando OTP.";
+                        <hr style='margin:30px 0;border:none;border-top:1px solid #eee'>
+
+                        <p style='font-size:13px;color:#aaa'>
+                            Si no creaste esta cuenta, puedes ignorar este mensaje.
+                        </p>
+                    </div>
+
+                    <div style='background:#f4f6f8;padding:20px;text-align:center;font-size:12px;color:#888'>
+                        © " . date("Y") . " X91 Technologies. Todos los derechos reservados.
+                    </div>
+
+                </div>
+            </div>
+            ";
+
+            $data = [
+                "from" => "X91 <onboarding@resend.dev>",
+                "to" => [$email],
+                "subject" => "Activa tu cuenta en X91",
+                "html" => $htmlEmail
+            ];
+
+            $ch = curl_init("https://api.resend.com/emails");
+
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                "Authorization: Bearer $apiKey",
+                "Content-Type: application/json"
+            ]);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+
+            $response = curl_exec($ch);
+
+            if (curl_errno($ch)) {
+                error_log("Curl error: " . curl_error($ch));
             }
+
+            curl_close($ch);
+
+            header("Location: verify.php?email=" . urlencode($email));
+            exit();
         }
     }
 }
@@ -82,7 +121,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
 <div class="auth-container">
     <h1 class="logo">X91</h1>
-    <p class="slogan">La nueva generación digital.</p>
+    <p class="slogan">Crea tu cuenta y evoluciona.</p>
 
     <?php if($mensaje): ?>
         <div class="error"><?= $mensaje ?></div>
