@@ -1,146 +1,78 @@
 <?php
-require_once "config/config.php";
+// Datos de conexión
+$host = "dpg-d66krl06fj8s7397t3lg-a.oregon-postgres.render.com";
+$dbname = "x91_db";
+$user = "x91_db_user";
+$password = "at26s0tdPHR6rb9ckPotpNLIMJoypc61";
+$port = "5432";
 
-/* =========================
-   PROTEGER PÁGINA
-========================= */
-if (!isset($_SESSION['user_id'])) {
-    header("Location: auth/login.php");
-    exit;
+try {
+    $pdo = new PDO("pgsql:host=$host;port=$port;dbname=$dbname", $user, $password);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch (PDOException $e) {
+    die("Error de conexión: " . $e->getMessage());
 }
 
-$user_id = $_SESSION['user_id'];
+// Insertar usuario
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $nombre = $_POST["nombre"];
+    $email = $_POST["email"];
+    $password = password_hash($_POST["password"], PASSWORD_DEFAULT);
 
-/* =========================
-   OBTENER BALANCE
-========================= */
-$stmt = $pdo->prepare("SELECT balance FROM wallets WHERE user_id = ?");
-$stmt->execute([$user_id]);
-$wallet = $stmt->fetch();
+    $sql = "INSERT INTO usuarios (nombre, email, password) VALUES (:nombre, :email, :password)";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([
+        ':nombre' => $nombre,
+        ':email' => $email,
+        ':password' => $password
+    ]);
 
-$balance = $wallet ? $wallet['balance'] : 0;
+    echo "<p>Usuario registrado correctamente</p>";
+}
 
-/* =========================
-   OBTENER PARTIDOS
-========================= */
-$stmt = $pdo->prepare("
-    SELECT * FROM matches 
-    WHERE status = 'scheduled' 
-    ORDER BY match_date ASC 
-    LIMIT 20
-");
-$stmt->execute();
-$matches = $stmt->fetchAll();
+// Obtener usuarios
+$stmt = $pdo->query("SELECT id, nombre, email, creado_en FROM usuarios ORDER BY id DESC");
+$usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!DOCTYPE html>
 <html>
 <head>
-    <title>X91</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="css/style.css">
+    <title>App en Render</title>
 </head>
 <body>
 
-<div class="app">
+<h2>Registrar Usuario</h2>
 
-    <!-- SIDEBAR -->
-    <div class="sidebar">
-        <h3>X91</h3>
-        <p>🏠 Inicio</p>
-        <p>💰 Mi Wallet</p>
-        <p>📊 Mis Apuestas</p>
-        <p>⚙ Configuración</p>
-        <br>
-        <a href="auth/logout.php">Cerrar sesión</a>
-    </div>
+<form method="POST">
+    <input type="text" name="nombre" placeholder="Nombre" required><br><br>
+    <input type="email" name="email" placeholder="Email" required><br><br>
+    <input type="password" name="password" placeholder="Password" required><br><br>
+    <button type="submit">Registrar</button>
+</form>
 
-    <!-- CONTENIDO -->
-    <div class="content">
+<hr>
 
-        <!-- TOPBAR -->
-        <div class="topbar">
-            <div>X91 Fútbol</div>
-            <div class="balance">
-                Balance: €<?php echo number_format($balance, 2); ?>
-            </div>
-        </div>
+<h2>Usuarios Registrados</h2>
 
-        <div class="banner">
-            <h2>Eventos principales</h2>
-        </div>
+<table border="1" cellpadding="5">
+    <tr>
+        <th>ID</th>
+        <th>Nombre</th>
+        <th>Email</th>
+        <th>Creado</th>
+    </tr>
 
-        <div class="matches">
+    <?php foreach ($usuarios as $usuario): ?>
+        <tr>
+            <td><?= $usuario['id'] ?></td>
+            <td><?= $usuario['nombre'] ?></td>
+            <td><?= $usuario['email'] ?></td>
+            <td><?= $usuario['creado_en'] ?></td>
+        </tr>
+    <?php endforeach; ?>
 
-            <?php if (!empty($matches)): ?>
-                <?php foreach ($matches as $match): ?>
-
-                    <div class="match-card">
-
-                        <div class="match-header">
-                            <?= htmlspecialchars($match["home_team"]) ?>
-                            <span>VS</span>
-                            <?= htmlspecialchars($match["away_team"]) ?>
-                        </div>
-
-                        <div class="progress-bar">
-                            <div class="progress"></div>
-                        </div>
-
-                        <!-- FORMULARIO DE APUESTA -->
-                        <form method="POST" action="actions/place_bet.php">
-
-                            <input type="hidden" name="match_id" value="<?= $match['id'] ?>">
-                            <input type="hidden" name="odds" value="2.10">
-
-                            <div class="odds-row">
-
-                                <button type="submit" name="selection" value="home">
-                                    Local
-                                    <strong>2.10</strong>
-                                </button>
-
-                                <button type="submit" name="selection" value="draw">
-                                    Empate
-                                    <strong>3.20</strong>
-                                </button>
-
-                                <button type="submit" name="selection" value="away">
-                                    Visitante
-                                    <strong>2.80</strong>
-                                </button>
-
-                            </div>
-
-                            <br>
-
-                            <input 
-                                type="number" 
-                                name="stake" 
-                                placeholder="Monto €" 
-                                step="0.01" 
-                                min="1" 
-                                required
-                            >
-
-                        </form>
-
-                        <div class="match-date">
-                            <?= date("d/m H:i", strtotime($match["match_date"])) ?>
-                        </div>
-
-                    </div>
-
-                <?php endforeach; ?>
-            <?php else: ?>
-                <p>No hay partidos disponibles.</p>
-            <?php endif; ?>
-
-        </div>
-
-    </div>
-
-</div>
+</table>
 
 </body>
 </html>
