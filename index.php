@@ -1,33 +1,38 @@
 <?php
-// Datos de conexión
-$host = "dpg-d66krl06fj8s7397t3lg-a.oregon-postgres.render.com";
-$dbname = "x91_db";
-$user = "x91_db_user";
-$password = "at26s0tdPHR6rb9ckPotpNLIMJoypc61";
-$port = "5432";
+// Conexión usando variables de entorno
+$host = getenv("DB_HOST");
+$dbname = getenv("DB_NAME");
+$user = getenv("DB_USER");
+$password = getenv("DB_PASS");
+$port = getenv("DB_PORT");
 
 try {
     $pdo = new PDO("pgsql:host=$host;port=$port;dbname=$dbname", $user, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
-    die("Error de conexión: " . $e->getMessage());
+    die("Error de conexión");
 }
 
+$mensaje = "";
+
 // Insertar usuario
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $nombre = $_POST["nombre"];
-    $email = $_POST["email"];
-    $password = password_hash($_POST["password"], PASSWORD_DEFAULT);
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    $nombre = trim($_POST["nombre"]);
+    $email = trim($_POST["email"]);
+    $passwordHash = password_hash($_POST["password"], PASSWORD_DEFAULT);
 
-    $sql = "INSERT INTO usuarios (nombre, email, password) VALUES (:nombre, :email, :password)";
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute([
-        ':nombre' => $nombre,
-        ':email' => $email,
-        ':password' => $password
-    ]);
-
-    echo "<p>Usuario registrado correctamente</p>";
+    if ($nombre && $email && $_POST["password"]) {
+        $sql = "INSERT INTO usuarios (nombre, email, password) VALUES (:nombre, :email, :password)";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([
+            ':nombre' => $nombre,
+            ':email' => $email,
+            ':password' => $passwordHash
+        ]);
+        $mensaje = "Usuario registrado correctamente";
+    } else {
+        $mensaje = "Todos los campos son obligatorios";
+    }
 }
 
 // Obtener usuarios
@@ -36,43 +41,51 @@ $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-    <title>App en Render</title>
+    <meta charset="UTF-8">
+    <title>X91 App</title>
+    <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
 
-<h2>Registrar Usuario</h2>
+<div class="container">
 
-<form method="POST">
-    <input type="text" name="nombre" placeholder="Nombre" required><br><br>
-    <input type="email" name="email" placeholder="Email" required><br><br>
-    <input type="password" name="password" placeholder="Password" required><br><br>
-    <button type="submit">Registrar</button>
-</form>
+    <h1>Registro de Usuario</h1>
 
-<hr>
+    <?php if ($mensaje): ?>
+        <div class="alert"><?= htmlspecialchars($mensaje) ?></div>
+    <?php endif; ?>
 
-<h2>Usuarios Registrados</h2>
+    <form method="POST" id="registroForm">
+        <input type="text" name="nombre" placeholder="Nombre" required>
+        <input type="email" name="email" placeholder="Email" required>
+        <input type="password" name="password" placeholder="Password" required>
+        <button type="submit">Registrar</button>
+    </form>
 
-<table border="1" cellpadding="5">
-    <tr>
-        <th>ID</th>
-        <th>Nombre</th>
-        <th>Email</th>
-        <th>Creado</th>
-    </tr>
+    <h2>Usuarios Registrados</h2>
 
-    <?php foreach ($usuarios as $usuario): ?>
+    <table>
         <tr>
-            <td><?= $usuario['id'] ?></td>
-            <td><?= $usuario['nombre'] ?></td>
-            <td><?= $usuario['email'] ?></td>
-            <td><?= $usuario['creado_en'] ?></td>
+            <th>ID</th>
+            <th>Nombre</th>
+            <th>Email</th>
+            <th>Creado</th>
         </tr>
-    <?php endforeach; ?>
 
-</table>
+        <?php foreach ($usuarios as $usuario): ?>
+            <tr>
+                <td><?= $usuario['id'] ?></td>
+                <td><?= htmlspecialchars($usuario['nombre']) ?></td>
+                <td><?= htmlspecialchars($usuario['email']) ?></td>
+                <td><?= $usuario['creado_en'] ?></td>
+            </tr>
+        <?php endforeach; ?>
+    </table>
 
+</div>
+
+<script src="assets/app.js"></script>
 </body>
 </html>
