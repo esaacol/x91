@@ -1,105 +1,55 @@
 <?php
 require '../config.php';
 
-$error = "";
+$mensaje = "";
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
-    $email = trim($_POST["email"]);
+    $email = $_POST["email"];
     $password = $_POST["password"];
 
-    $stmt = $pdo->prepare("SELECT * FROM usuarios WHERE email = :email");
-    $stmt->execute([':email' => $email]);
-    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    $stmt = $pdo->prepare("SELECT * FROM usuarios WHERE email = ?");
+    $stmt->execute([$email]);
+    $user = $stmt->fetch();
 
-    if ($user) {
-
-        if (!$user['verificado']) {
-            $error = "Debes verificar tu correo antes de iniciar sesión.";
-        }
-
-        elseif (password_verify($password, $user['password'])) {
-
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['nombre'] = $user['nombre'];
-
-            header("Location: ../dashboard.php");
-            exit();
-        }
-
-        else {
-            $error = "Credenciales incorrectas.";
-        }
-
+    if (!$user) {
+        $mensaje = "Credenciales incorrectas.";
+    } elseif (!$user["email_verificado"]) {
+        $mensaje = "Debes verificar tu correo.";
+    } elseif (!password_verify($password, $user["password"])) {
+        $mensaje = "Credenciales incorrectas.";
     } else {
-        $error = "Credenciales incorrectas.";
+        $_SESSION["user_id"] = $user["id"];
+        $_SESSION["nombre"] = $user["nombre"];
+        header("Location: ../dashboard.php");
+        exit();
     }
 }
 ?>
 
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>Login - X91</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-<style>
-body {
-    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-    min-height: 100vh;
-}
-.brand {
-    font-size: 2.5rem;
-    font-weight: 700;
-    letter-spacing: 3px;
-}
-.slogan {
-    font-size: 0.9rem;
-    opacity: 0.8;
-}
-.card {
-    border-radius: 15px;
-}
-</style>
+<title>X91 - Login</title>
+<link rel="stylesheet" href="../assets/auth.css">
 </head>
+<body>
 
-<body class="d-flex align-items-center justify-content-center text-light">
+<div class="auth-container">
+    <h1 class="logo">X91</h1>
+    <p class="slogan">Accede a tu mundo digital.</p>
 
-<div class="col-md-4">
+    <?php if($mensaje): ?>
+        <div class="error"><?= $mensaje ?></div>
+    <?php endif; ?>
 
-<div class="card bg-dark shadow-lg p-4">
+    <form method="POST">
+        <input type="email" name="email" placeholder="Correo electrónico" required>
+        <input type="password" name="password" placeholder="Contraseña" required>
+        <button type="submit">Iniciar Sesión</button>
+    </form>
 
-<div class="text-center mb-4">
-<div class="brand">X91</div>
-<div class="slogan">Innovación segura para tu futuro digital</div>
-</div>
-
-<?php if ($error): ?>
-<div class="alert alert-danger text-center">
-<?= htmlspecialchars($error) ?>
-</div>
-<?php endif; ?>
-
-<form method="POST">
-
-<div class="mb-3">
-<input type="email" name="email" class="form-control" placeholder="Correo electrónico" required>
-</div>
-
-<div class="mb-3">
-<input type="password" name="password" class="form-control" placeholder="Contraseña" required>
-</div>
-
-<button class="btn btn-primary w-100">Iniciar Sesión</button>
-
-</form>
-
-<div class="text-center mt-3">
-<a href="register.php" class="text-light">Crear cuenta</a>
-</div>
-
-</div>
-
+    <a href="register.php">Crear nueva cuenta</a>
 </div>
 
 </body>
