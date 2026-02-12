@@ -1,5 +1,4 @@
 <?php
-// Conexión usando variables de entorno
 $host = getenv("DB_HOST");
 $dbname = getenv("DB_NAME");
 $user = getenv("DB_USER");
@@ -15,14 +14,14 @@ try {
 
 $mensaje = "";
 
-// Insertar usuario
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $nombre = trim($_POST["nombre"]);
     $email = trim($_POST["email"]);
     $passwordHash = password_hash($_POST["password"], PASSWORD_DEFAULT);
 
     if ($nombre && $email && $_POST["password"]) {
-        $sql = "INSERT INTO usuarios (nombre, email, password) VALUES (:nombre, :email, :password)";
+        $sql = "INSERT INTO usuarios (nombre, email, password) 
+                VALUES (:nombre, :email, :password)";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([
             ':nombre' => $nombre,
@@ -35,8 +34,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 }
 
-// Obtener usuarios
-$stmt = $pdo->query("SELECT id, nombre, email, creado_en FROM usuarios ORDER BY id DESC");
+$stmt = $pdo->query("SELECT id, nombre, email, creado_en 
+                     FROM usuarios ORDER BY id DESC");
 $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
@@ -45,47 +44,93 @@ $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <head>
     <meta charset="UTF-8">
     <title>X91 App</title>
-    <link rel="stylesheet" href="assets/style.css">
+
+    <!-- Bootstrap 5 CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body>
 
-<div class="container">
+<body class="bg-light">
 
-    <h1>Registro de Usuario</h1>
+<div class="container py-5">
 
-    <?php if ($mensaje): ?>
-        <div class="alert"><?= htmlspecialchars($mensaje) ?></div>
-    <?php endif; ?>
+    <div class="row justify-content-center">
+        <div class="col-md-6">
 
-    <form method="POST" id="registroForm">
-        <input type="text" name="nombre" placeholder="Nombre" required>
-        <input type="email" name="email" placeholder="Email" required>
-        <input type="password" name="password" placeholder="Password" required>
-        <button type="submit">Registrar</button>
-    </form>
+            <div class="card shadow">
+                <div class="card-body">
 
-    <h2>Usuarios Registrados</h2>
+                    <h3 class="text-center mb-4">Registro de Usuario</h3>
 
-    <table>
-        <tr>
-            <th>ID</th>
-            <th>Nombre</th>
-            <th>Email</th>
-            <th>Creado</th>
-        </tr>
+                    <?php if ($mensaje): ?>
+                        <div class="alert alert-success">
+                            <?= htmlspecialchars($mensaje) ?>
+                        </div>
+                    <?php endif; ?>
 
-        <?php foreach ($usuarios as $usuario): ?>
-            <tr>
-                <td><?= $usuario['id'] ?></td>
-                <td><?= htmlspecialchars($usuario['nombre']) ?></td>
-                <td><?= htmlspecialchars($usuario['email']) ?></td>
-                <td><?= $usuario['creado_en'] ?></td>
-            </tr>
-        <?php endforeach; ?>
-    </table>
+                    <form method="POST">
+                        <div class="mb-3">
+                            <input type="text" name="nombre" class="form-control" placeholder="Nombre" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <input type="email" name="email" class="form-control" placeholder="Email" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <input type="password" name="password" class="form-control" placeholder="Password" required>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                Registrar
+                            </button>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="row mt-5">
+        <div class="col-12">
+
+            <div class="card shadow">
+                <div class="card-body">
+
+                    <h4 class="mb-4">Usuarios Registrados</h4>
+
+                    <div class="table-responsive">
+                        <table class="table table-striped table-bordered align-middle">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nombre</th>
+                                    <th>Email</th>
+                                    <th>Creado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($usuarios as $usuario): ?>
+                                    <tr>
+                                        <td><?= $usuario['id'] ?></td>
+                                        <td><?= htmlspecialchars($usuario['nombre']) ?></td>
+                                        <td><?= htmlspecialchars($usuario['email']) ?></td>
+                                        <td><?= $usuario['creado_en'] ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
 
 </div>
 
-<script src="assets/app.js"></script>
 </body>
 </html>
