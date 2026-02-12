@@ -12,17 +12,24 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $stmt->execute([$email]);
     $user = $stmt->fetch();
 
-    if (!$user) {
-        $mensaje = "Credenciales incorrectas.";
-    } elseif (!$user["email_verificado"]) {
-        $mensaje = "Debes verificar tu correo.";
-    } elseif (!password_verify($password, $user["password"])) {
-        $mensaje = "Credenciales incorrectas.";
+    if ($user) {
+
+        if (!$user["email_verificado"]) {
+            $mensaje = "Debes verificar tu cuenta primero.";
+        } elseif (password_verify($password, $user["password"])) {
+
+            $_SESSION["user_id"] = $user["id"];
+            $_SESSION["nombre"] = $user["nombre"];
+
+            header("Location: ../dashboard.php");
+            exit();
+
+        } else {
+            $mensaje = "Credenciales incorrectas.";
+        }
+
     } else {
-        $_SESSION["user_id"] = $user["id"];
-        $_SESSION["nombre"] = $user["nombre"];
-        header("Location: ../dashboard.php");
-        exit();
+        $mensaje = "Usuario no encontrado.";
     }
 }
 ?>
@@ -30,27 +37,28 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <!DOCTYPE html>
 <html>
 <head>
-<title>X91 - Login</title>
-<link rel="stylesheet" href="../assets/auth.css">
+<title>Login - X91</title>
 </head>
 <body>
 
-<div class="auth-container">
-    <h1 class="logo">X91</h1>
-    <p class="slogan">Accede a tu mundo digital.</p>
+<h2>Iniciar Sesión</h2>
 
-    <?php if($mensaje): ?>
-        <div class="error"><?= $mensaje ?></div>
-    <?php endif; ?>
+<?php
+if(isset($_GET["success"])) {
+    echo "<p>Cuenta verificada correctamente.</p>";
+}
+if($mensaje) {
+    echo "<p>$mensaje</p>";
+}
+?>
 
-    <form method="POST">
-        <input type="email" name="email" placeholder="Correo electrónico" required>
-        <input type="password" name="password" placeholder="Contraseña" required>
-        <button type="submit">Iniciar Sesión</button>
-    </form>
+<form method="POST">
+<input type="email" name="email" placeholder="Correo" required><br>
+<input type="password" name="password" placeholder="Contraseña" required><br>
+<button type="submit">Entrar</button>
+</form>
 
-    <a href="register.php">Crear nueva cuenta</a>
-</div>
+<a href="register.php">Crear cuenta</a>
 
 </body>
 </html>
