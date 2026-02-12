@@ -18,5 +18,7 @@ WORKDIR /var/www/html/
 # Instalar dependencias (PHPMailer)
 RUN composer install
 
+RUN docker-php-ext-install curl
+
 EXPOSE 80
 
