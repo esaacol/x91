@@ -19,3 +19,4 @@ WORKDIR /var/www/html/
 RUN composer install
 
 EXPOSE 80
+
