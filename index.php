@@ -1,4 +1,14 @@
 <?php
+require 'config.php';
+
+if (isset($_SESSION['user_id'])) {
+    header("Location: dashboard.php");
+    exit();
+} else {
+    header("Location: auth/login.php");
+    exit();
+}
+
 $host = getenv("DB_HOST");
 $dbname = getenv("DB_NAME");
 $user = getenv("DB_USER");
